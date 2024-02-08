@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: "blog_pro305"
+
+Globals:
+  Function:
+    Timeout: 3
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,DELETE,PUT,OPTIONS'"
+      AllowHeaders: "'content-type'"
+      AllowOrigin: "'*'"
+
+Resources:
+  User:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      PackageType: Image
+      Policies:
+        - AmazonDynamoDBFullAccess
+        - DynamoDBCrudPolicy:
+            TableName: AuditionMePerson
+      Architectures:
+        - x86_64
+      Events:
+        GetPerson:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /person
+            Method: get
+        GetPersonById:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /person/{id}
+            Method: get
+        CreatePerson:
+          Type: Api
+          Properties:
+            Path: /person
+            Method: post
+        UpdatePerson:
+          Type: Api
+          Properties:
+            Path: /person/{id}
+            Method: put
+        DeletePerson:
+          Type: Api
+          Properties:
+            Path: /person/{id}
+            Method: delete
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./person/get
+      DockerTag: python3.12-v1
