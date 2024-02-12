@@ -11,9 +11,6 @@ blog_post_table = boto3.resource('dynamodb', region_name=region_name).Table('Blo
 def lambda_handler(event, context):
     http_method = event["httpMethod"]
 
-    if "body" in event and event["body"] is not None:
-        event = json.loads(event["body"])
-
     if http_method == "POST":
         return create_post(event, context)
     elif http_method == "GET":
@@ -26,6 +23,8 @@ def lambda_handler(event, context):
 
 
 def create_post(event, context):
+    if "body" in event and event["body"] is not None:
+        event = json.loads(event["body"])
     pass
 
 
@@ -34,6 +33,8 @@ def get_post(event, context):
 
 
 def update_post(event, context):
+    if "body" in event and event["body"] is not None:
+        event = json.loads(event["body"])
     pass
 
 
