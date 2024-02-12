@@ -19,36 +19,36 @@ Resources:
       Policies:
         - AmazonDynamoDBFullAccess
         - DynamoDBCrudPolicy:
-            TableName: AuditionMePerson
+            TableName: BlogUser
       Architectures:
         - x86_64
       Events:
-        GetPerson:
+        GetUser:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
-            Path: /person
+            Path: /user
             Method: get
         GetPersonById:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
-            Path: /person/{id}
+            Path: /user/{id}
             Method: get
         CreatePerson:
           Type: Api
           Properties:
-            Path: /person
+            Path: /user
             Method: post
         UpdatePerson:
           Type: Api
           Properties:
-            Path: /person/{id}
+            Path: /user/{id}
             Method: put
         DeletePerson:
           Type: Api
           Properties:
-            Path: /person/{id}
+            Path: /user/{id}
             Method: delete
     Metadata:
       Dockerfile: Dockerfile
-      DockerContext: ./person/get
+      DockerContext: ./user/get
       DockerTag: python3.12-v1
