@@ -50,5 +50,13 @@ Resources:
             Method: delete
     Metadata:
       Dockerfile: Dockerfile
-      DockerContext: ./user/get
+      DockerContext: ./lambdas/user
       DockerTag: python3.12-v1
+
+  UserTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+          Name: Id
+          Type: String
+      TableName: BlogUser

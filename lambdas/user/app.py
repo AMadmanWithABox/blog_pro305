@@ -11,9 +11,6 @@ blog_user_table = boto3.resource('dynamodb', region_name=region_name).Table('Blo
 def lambda_handler(event, context):
     http_method = event["httpMethod"]
 
-    if "body" in event and event["body"] is not None:
-        event = json.loads(event["body"])
-
     if http_method == "POST":
         return create_user(event, context)
     elif http_method == "GET":
@@ -27,6 +24,9 @@ def lambda_handler(event, context):
 
 
 def create_user(event, context):
+    if "body" in event and event["body"] is not None:
+        event = json.loads(event["body"])
+
     user_id = str(uuid4())
     username = event["username"]
     password = event["password"]
@@ -36,6 +36,8 @@ def create_user(event, context):
         "username": username,
         "password": password
     })
+
+    return response(200, {"user_id": user_id, "message": "User successfully created!"})
 
 
 def get_user(event, context):
@@ -55,6 +57,8 @@ def get_user(event, context):
 
 
 def update_user(event, context):
+    if "body" in event and event["body"] is not None:
+        event = json.loads(event["body"])
     id = event["id"]
     username = event["username"]
     password = event["password"]

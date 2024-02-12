@@ -5,3 +5,6 @@
 /.idea/modules.xml
 /.idea/inspectionProfiles/profiles_settings.xml
 /.idea/vcs.xml
+/.aws-sam/build.toml
+/.idea/inspectionProfiles/Project_Default.xml
+/.aws-sam/build/template.yaml
