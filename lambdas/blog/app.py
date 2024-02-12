@@ -7,7 +7,6 @@ import json
 region_name = getenv('APP_REGION')
 blog_blog_table = boto3.resource('dynamodb', region_name=region_name).Table('BlogBlog2024')
 
-
 def lambda_handler(event, context):
     http_method = event["httpMethod"]
 
@@ -24,18 +23,14 @@ def lambda_handler(event, context):
         return delete_blog(event, context)
     pass
 
-
 def create_blog(event, context):
     pass
-
 
 def get_blog(event, context):
     pass
 
-
 def update_blog(event, context):
     pass
-
 
 def delete_blog(event, context):
     pass
