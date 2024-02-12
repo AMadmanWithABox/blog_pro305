@@ -59,13 +59,14 @@ def get_user(event, context):
 def update_user(event, context):
     if "body" in event and event["body"] is not None:
         event = json.loads(event["body"])
-    id = event["id"]
+
+    user_id = event["id"]
     username = event["username"]
     password = event["password"]
 
-    user = blog_user_table.get_item(Key={"Id": id})["Item"]
+    user = blog_user_table.get_item(Key={"Id": user_id})["Item"]
 
-    if id is None:
+    if user_id is None:
         return response(404, "User not found")
     if username is not None:
         user['username'] = username
@@ -83,12 +84,12 @@ def delete_user(event, context):
 
     path = event["pathParameters"]
 
-    if path is None or "id" not in path:
-        return response(400, "no id found")
+    if path is None or "user_id" not in path:
+        return response(400, "no user_id found")
 
-    id = path["id"]
+    user_id = path["user_id"]
 
-    output = blog_user_table.delete_item(Key={"Id": id})
+    output = blog_user_table.delete_item(Key={"Id": user_id})
 
     return response(200, output)
 
