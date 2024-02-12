@@ -5,7 +5,7 @@ from uuid import uuid4
 import json
 
 region_name = getenv('APP_REGION')
-blog_user_table = boto3.resource('dynamodb', region_name=region_name).Table('BlogUser2024')
+blog_user_table = boto3.resource('dynamodb', region_name=region_name).Table('BlogUser')
 
 
 def lambda_handler(event, context):
