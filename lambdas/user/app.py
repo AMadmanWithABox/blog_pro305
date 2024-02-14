@@ -1,3 +1,5 @@
+import base64
+
 import boto3
 from boto3.dynamodb.conditions import Key
 from os import getenv
@@ -10,14 +12,23 @@ blog_user_table = boto3.resource('dynamodb', region_name=region_name).Table('Blo
 
 def lambda_handler(event, context):
     http_method = event["httpMethod"]
-
     if http_method == "POST":
         return create_user(event, context)
-    elif http_method == "GET":
+
+    auth_header = event["headers"]["Authorization"]
+    encoded_credentials = auth_header.split(' ')[1]
+    decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
+    print(decoded_credentials)
+    # authorizationPolicy = request.for.auth(user, password)
+
+    if http_method == "GET":
+        # if authorizationPolicy == "user":
         return get_user(event, context)
     elif http_method == "PUT":
+        # if authorizationPolicy == "user":
         return update_user(event, context)
     elif http_method == "DELETE":
+        # if authorizationPolicy == "user":
         return delete_user(event, context)
     else:
         return response(400, "invalid http method")
@@ -40,18 +51,27 @@ def create_user(event, context):
     return response(200, {"user_id": user_id, "message": "User successfully created!"})
 
 
-def get_user(event, context):
+def get_user_by_username_password(username, password):
+    user = blog_user_table.get_item(Key={"username": username, "password": password})["Item"]
+
+    return user["Id"]
+
+
+def get_user(event, context, authorized_user_id=None):
+
     if "pathParameters" not in event:
         return response(400, {"error": "no path params"})
 
     path = event["pathParameters"]
+    user_id = path["id"]
+
+    if authorized_user_id is None or authorized_user_id == user_id:
+        return response(401, "Unauthorized")
 
     if path is None or "id" not in path:
         return response(400, "no id found")
 
-    id = path["id"]
-
-    user = blog_user_table.get_item(Key={"Id": id})["Item"]
+    user = blog_user_table.get_item(Key={"Id": user_id})["Item"]
 
     return response(200, user)
 
