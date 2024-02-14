@@ -36,7 +36,7 @@ def create_blog(event, context):
 
     blog_blog_table.put_item(Item={
         "Id": blog_id,
-        # "user_id": owner_id,
+        # "owner_id": owner_id,
         "title": title,
         "category": category,
         "description": description
