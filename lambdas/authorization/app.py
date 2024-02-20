@@ -7,7 +7,6 @@ import os
 region_name = os.getenv('APP_REGION')
 blog_user_table = boto3.resource('dynamodb', region_name=region_name).Table('BlogUser')
 
-
 def lambda_handler(event, context):
     try:
         auth_header = event['headers'].get("Authorization")
@@ -21,12 +20,11 @@ def lambda_handler(event, context):
         credentials = b64decode(matcher1.group(1)).decode('utf-8')
         username, password = credentials.split(':')
 
-        if found_in_db(username, password):
-            effect = "Allow"
+        user_guid, effect = found_in_db(username, password)
+        if effect == "Allow":
+            return generate_policy('user', effect, event['methodArn'], user_guid)
         else:
-            effect = "Deny"
-
-        return generate_policy('user', effect, event['methodArn'])
+            raise Exception('Unauthorized')
 
     except Exception as e:
         print(f"Error: {str(e)}")
@@ -34,7 +32,6 @@ def lambda_handler(event, context):
 
 
 def found_in_db(username, password):
-    # Ideally, use a more efficient query here if your table design allows
     response = blog_user_table.scan(
         FilterExpression="username = :username AND password = :password",
         ExpressionAttributeValues={
@@ -42,11 +39,16 @@ def found_in_db(username, password):
             ':password': password
         }
     )
-    return len(response["Items"]) == 1
+
+    if len(response["Items"]) == 1:
+        user_guid = response["Items"][0].get("user_guid")  # Assuming 'user_guid' is the attribute name in your DynamoDB table
+        return user_guid, "Allow"
+    else:
+        return None, "Deny"
 
 
-def generate_policy(principal_id, effect, resource):
-    return {
+def generate_policy(principal_id, effect, resource, user_guid):
+    auth_response = {
         "principalId": principal_id,
         "policyDocument": {
             "Version": "2012-10-17",
@@ -55,5 +57,9 @@ def generate_policy(principal_id, effect, resource):
                 "Effect": effect,
                 "Resource": resource
             }]
+        },
+        "context": {
+            "user_guid": user_guid
         }
     }
+    return auth_response
