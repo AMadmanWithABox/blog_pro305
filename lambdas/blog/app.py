@@ -29,18 +29,20 @@ def create_blog(event, context):
     if "body" in event and event["body"] is not None:
         body = json.loads(event["body"])
 
+    user_guid = event['requestContext']['authorizer']['user_guid']
+
     blog_id = str(uuid4())
-    owner_id = body["owner_id"]
     title = body["title"]
     category = body["category"]
     description = body["description"]
 
     blog_blog_table.put_item(Item={
         "Id": blog_id,
-        "owner_id": owner_id,
+        "user_guid": user_guid,
         "title": title,
         "category": category,
-        "description": description
+        "description": description,
+        "subscribers": []
     })
 
     return response(200, {"blog_id": blog_id, "message": "Blog successfully created!"})
@@ -67,14 +69,21 @@ def update_blog(event, context):
         event = json.loads(event["body"])
 
     blog_id = event["id"]
+    if blog_id is None:
+        return response(400, "Blog id not found")
+
+    blog = blog_blog_table.get_item(Key={"Id": blog_id})["Item"]
+    if blog is None:
+        return response(400, "Blog not found")
+
+    user_guid = event['requestContext']['authorizer']['user_guid']
+    if blog['user_guid'] != user_guid:
+        return response(401, "Unauthorized")
+
     title = event["title"]
     category = event["category"]
     description = event["description"]
 
-    blog = blog_blog_table.get_item(Key={"Id": id})["Item"]
-
-    if blog_id is None:
-        return response(400, "Blog not found")
     if title is not None:
         blog['title'] = title
     if category is not None:
@@ -96,7 +105,15 @@ def delete_blog(event, context):
     if path is None or "blog_id" not in path:
         return response(400, "no blog_id found")
 
-    blog_id = path["blog_id"]
+    blog_id = event["id"]
+
+    blog = blog_blog_table.get_item(Key={"Id": blog_id})["Item"]
+    if blog is None:
+        return response(400, "Blog not found")
+
+    user_guid = event['requestContext']['authorizer']['user_guid']
+    if blog['user_guid'] != user_guid:
+        return response(401, "Unauthorized")
 
     output = blog_blog_table.delete_item(Key={"Id": blog_id})
 
