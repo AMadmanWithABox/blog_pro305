@@ -8,6 +8,8 @@ region_name = getenv('APP_REGION')
 blog_blog_table = boto3.resource('dynamodb', region_name=region_name).Table('BlogBlog')
 
 
+#   This lambda will be locked down to only authenticated users, so we don't need to check for that here,
+#   but we still need to check the http method
 def lambda_handler(event, context):
     http_method = event["httpMethod"]
 
@@ -28,19 +30,17 @@ def create_blog(event, context):
         body = json.loads(event["body"])
 
     blog_id = str(uuid4())
-    # owner_id = body["owner_id"]
-    # owner_id = event["requestContext"]["authorizer"]["claims"]["sub"] # We can get the owner_id from the Header
+    owner_id = body["owner_id"]
     title = body["title"]
     category = body["category"]
     description = body["description"]
 
     blog_blog_table.put_item(Item={
         "Id": blog_id,
-        # "owner_id": owner_id,
+        "owner_id": owner_id,
         "title": title,
         "category": category,
         "description": description
-        # "editors": [owner_id]
     })
 
     return response(200, {"blog_id": blog_id, "message": "Blog successfully created!"})
