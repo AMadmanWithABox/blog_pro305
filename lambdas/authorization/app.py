@@ -7,6 +7,7 @@ import os
 region_name = os.getenv('APP_REGION')
 blog_user_table = boto3.resource('dynamodb', region_name=region_name).Table('BlogUser')
 
+
 def lambda_handler(event, context):
     try:
         auth_header = event['headers'].get("Authorization")
