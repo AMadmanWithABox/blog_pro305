@@ -23,30 +23,35 @@ Resources:
       Architectures:
         - x86_64
       Events:
-        GetUser:
+        GetAllUsers:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /user
             Method: get
-        GetPersonById:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+        GetUserById:
+          Type: Api
           Properties:
-            Path: /user/{id}
+            Path: /user/id/{id}
             Method: get
-        CreatePerson:
+        GetUserByUsername:
+          Type: Api
+          Properties:
+            Path: /user/username/{username}
+            Method: get
+        CreateUser:
           Type: Api
           Properties:
             Path: /user
             Method: post
-        UpdatePerson:
+        UpdateUser:
           Type: Api
           Properties:
-            Path: /user/{id}
+            Path: /user
             Method: put
-        DeletePerson:
+        DeleteUser:
           Type: Api
           Properties:
-            Path: /user/{id}
+            Path: /user
             Method: delete
     Metadata:
       Dockerfile: Dockerfile

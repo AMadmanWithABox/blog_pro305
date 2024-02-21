@@ -1,7 +1,7 @@
 import base64
-
 import boto3
 from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr
 from os import getenv
 from uuid import uuid4
 import json
@@ -19,6 +19,8 @@ def lambda_handler(event, context):
 
     # grab the auth header and decode it
     auth_header = event["headers"]["Authorization"]
+    if not auth_header:
+        return response(401, "Unauthorized")
     encoded_credentials = auth_header.split(' ')[1]
     decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
 
@@ -46,11 +48,20 @@ def create_user(event, context):
     if "body" in event and event["body"] is not None:
         event = json.loads(event["body"])
 
+    # Check if username already exists in the table
+    user = blog_user_table.scan(FilterExpression=Attr('username').eq(event["username"]))
+    if len(user["Items"]) > 0:
+        return response(400, {"error": "Username already exists"})
+
     # Generate a new guid for the user
     user_id = str(uuid4())
     # Grab the username and password from the request body
     username = event["username"]
     password = event["password"]
+
+    # check if the username or password is empty
+    if username is None or password is None:
+        return response(400, {"error": "Username and password are required"})
 
     # Check if the username is already taken???
     blog_user_table.put_item(Item={
@@ -64,36 +75,29 @@ def create_user(event, context):
 
 # Grabs the current users guid with their auth credentials
 def get_user_by_username_password(username, password):
-    user = blog_user_table.get_item(Key={"username": username, "password": password})["Item"]
-    # If the user is not found, return None
-    if user is None:
+    # find the user in the table
+    user = blog_user_table.scan(FilterExpression=Attr('username').eq(username) & Attr('password').eq(password))
+    # if the user is found, return their guid
+    if len(user["Items"]) == 1:
+        return user["Items"][0]["Id"]
+    # if the user is not found, return None
+    else:
         return None
-    return user["Id"]
 
 
 # This endpoint is only accessible by users of the website, returns the user's username and id.
 def get_user(event, context):
-    if "pathParameters" not in event:
-        # Scan the table to get all users
-        users = blog_user_table.scan()["Items"]
-        # Transform the list of users to only include 'username' and 'guid'
-        simplified_users = [
-            {"username": user.get("username"), "guid": user.get("guid")}
-            for user in users
-        ]
-        return response(200, simplified_users)
+    path = event.get("pathParameters") or {}
 
-    path = event["pathParameters"]
-    # if path is None:
-    #     return response(400, "no id or username found")
-    #   If the path contains an id, we will use that to fetch the user data
+    # Now, even if pathParameters were None, path will be an empty dict,
+    # and the 'in' checks will not raise an error
     if "id" in path:
         user_id = path["id"]
         # Fetch the user data from the table. Make sure to handle potential exceptions here.
         user_data = blog_user_table.get_item(Key={"Id": user_id})
         # Check if the user was found
         if "Item" not in user_data:
-            return response(404, {"error": "User not found"})
+            return response(404, {"error": f"User with id {user_id} not found"})
         user = user_data["Item"]
         # Construct a response that only includes the user_id and username
         user_info = {
@@ -102,14 +106,13 @@ def get_user(event, context):
         }
         return response(200, user_info)
 
-    #   If the path contains a username, we will use that to fetch the user data
-    if "username" in path:
+    elif "username" in path:
         username = path["username"]
         # Fetch the user data from the table. Make sure to handle potential exceptions here.
-        user_data = blog_user_table.scan(FilterExpression=Key("username").eq(username))
+        user_data = blog_user_table.scan(FilterExpression=Attr("username").eq(username))
         # Check if the user was found
-        if "Items" not in user_data:
-            return response(404, {"error": "User not found"})
+        if len(user_data["Items"]) == 0:
+            return response(404, {"error": f"User with username {username} not found"})
         user = user_data["Items"][0]
         # Construct a response that only includes the user_id and username
         user_info = {
@@ -117,6 +120,11 @@ def get_user(event, context):
             "username": user.get("username", "No username")  # Provide a default value in case the username is not found
         }
         return response(200, user_info)
+
+    # If no path parameters are provided, return a list of all users
+    users = blog_user_table.scan()["Items"]
+    simplified_users = [{"username": user.get("username"), "Id": user.get("Id")} for user in users]
+    return response(200, simplified_users)
 
 
 #   Only the user can update their own account, we grab their guid by get_user_by_username_password(username, password):
