@@ -120,6 +120,41 @@ def delete_blog(event, context):
     return response(200, output)
 
 
+def subscribe_to_blog(event, context):
+    if "body" in event and event["body"] is not None:
+        event = json.loads(event["body"])
+
+    #  Get the blog id from the path parameters, and the user_guid from the authorizer
+    blog_id = event["blog_id"]
+    user_guid = event['requestContext']['authorizer']['user_guid']
+
+    # Get the blog from the table
+    blog = blog_blog_table.get_item(Key={"Id": blog_id})["Item"]
+    if blog is None:
+        return response(400, "Blog not found")
+
+    # check if user is the owner of the blog
+    if blog['user_guid'] == user_guid:
+        return response(400, "User cannot subscribe to their own blog")
+
+    # Get the subscribers from the blog
+    subscribers = blog['subscribers']
+    #  Check if the user is already subscribed
+    if user_guid not in subscribers:
+        subscribers.append(user_guid)
+    else:
+        return response(400, "User already subscribed")
+
+    # Update the blog with the new subscribers list
+    blog_blog_table.update_item(
+        Key={"Id": blog_id},
+        UpdateExpression="set subscribers = :s",
+        ExpressionAttributeValues={":s": subscribers}
+    )
+
+    return response(200, blog)
+
+
 def response(code, body):
     return {
         "statusCode": code,

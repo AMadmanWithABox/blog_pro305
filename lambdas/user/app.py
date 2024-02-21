@@ -103,7 +103,7 @@ def get_user(event, context):
         return response(200, user_info)
 
     #   If the path contains a username, we will use that to fetch the user data
-    elif "username" in path:
+    if "username" in path:
         username = path["username"]
         # Fetch the user data from the table. Make sure to handle potential exceptions here.
         user_data = blog_user_table.scan(FilterExpression=Key("username").eq(username))
