@@ -28,17 +28,17 @@ def lambda_handler(event, context):
     # We only need to check the remaining http methods if the user is authenticated, we can do that here once.
     if current_user_guid is None:
         return response(401, "Unauthorized")
-    elif current_user_guid is not None:
-        if http_method == "GET":
-            return get_user(event, context)
-        elif http_method == "PUT":
-            return update_user(event, context, current_user_guid)
-        elif http_method == "DELETE":
-            return delete_user(current_user_guid)
-        else:
-            return response(400, "invalid http method")
-    else:   # This should never happen, but it's good to have a catch-all
-        return response(500, "Internal Server Error")
+
+    if http_method == "GET":
+        return get_user(event, context)
+    if http_method == "PUT":
+        return update_user(event, context, current_user_guid)
+    if http_method == "DELETE":
+        return delete_user(current_user_guid)
+    # else:
+    return response(400, "invalid http method")
+    # else:   # This should never happen, but it's good to have a catch-all
+    #     return response(500, "Internal Server Error")
 
 
 # Anyone can create a user, no need for authentication
