@@ -12,6 +12,31 @@ Globals:
       AllowOrigin: "'*'"
 
 Resources:
+  BlogApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        DefaultAuthorizer: Authorizer
+        Authorizers:
+
+
+  Authorizer:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Handler: authorizer.handler
+      Policies:
+        - AmazonDynamoDBFullAccess
+        - DynamoDBCrudPolicy:
+            TableName: BlogUser
+      Architectures:
+        - x86_64
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./lambdas/authorization
+      DockerTag: python3.12-v1
+
   User:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -58,6 +83,63 @@ Resources:
       DockerContext: ./lambdas/user
       DockerTag: python3.12-v1
 
+  Blog:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Policies:
+        - AmazonDynamoDBFullAccess
+        - DynamoDBCrudPolicy:
+            TableName: BlogBlog
+      Architectures:
+        - x86_64
+      Events:
+        GetAllBlogs:
+          Type: Api
+          Properties:
+            Path: /blog
+            Method: get
+        GetBlogById:
+          Type: Api
+          Properties:
+            Path: /blog/id/{id}
+            Method: get
+        GetBlogByTitle:
+          Type: Api
+          Properties:
+            Path: /blog/title/{title}
+            Method: get
+        GetBlogByCategory:
+          Type: Api
+          Properties:
+            Path: /blog/category/{category}
+            Method: get
+        GetBlogByAuthor:
+          Type: Api
+          Properties:
+            Path: /blog/author/{author}
+            Method: get
+        CreateBlog:
+          Type: Api
+          Properties:
+            Path: /blog
+            Method: post
+        UpdateBlog:
+          Type: Api
+          Properties:
+            Path: /blog
+            Method: put
+        DeleteBlog:
+          Type: Api
+          Properties:
+            Path: /blog/id/{id}
+            Method: delete
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./lambdas/blog
+      DockerTag: python3.12-v1
+
+
   UserTable:
     Type: AWS::Serverless::SimpleTable
     Properties:
@@ -65,3 +147,11 @@ Resources:
           Name: Id
           Type: String
       TableName: BlogUser
+
+  BlogTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+          Name: Id
+          Type: String
+      TableName: BlogBlog
