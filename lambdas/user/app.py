@@ -11,22 +11,23 @@ blog_user_table = boto3.resource('dynamodb', region_name=region_name).Table('Blo
 
 
 def lambda_handler(event, context):
-    http_method = event["httpMethod"]
+    http_method = event["requestContext"]["http"]["method"]
 
     # If the user is not authenticated, they can only create a user
     if http_method == "POST":
         return create_user(event, context)
 
     # grab the auth header and decode it
-    auth_header = event["headers"]["Authorization"]
-    if not auth_header:
-        return response(401, "Unauthorized")
-    encoded_credentials = auth_header.split(' ')[1]
-    decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
+    # auth_header = event["headers"]["Authorization"]
+    # if not auth_header:
+    #     return response(401, "Unauthorized")
+    # encoded_credentials = auth_header.split(' ')[1]
+    # decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
 
     # Get the user's guid from the decoded credentials
-    current_user_guid = get_user_by_username_password(decoded_credentials.split(":")[0], decoded_credentials.split(":")[1])
-
+    # current_user_guid = get_user_by_username_password(decoded_credentials.split(":")[0], decoded_credentials.split(":")[1])
+    print("Received event: " + json.dumps(event, indent=2))
+    current_user_guid = event['requestContext']['authorizer']['lambda']['user_guid']
     # We only need to check the remaining http methods if the user is authenticated, we can do that here once.
     if current_user_guid is None:
         return response(401, "Unauthorized")

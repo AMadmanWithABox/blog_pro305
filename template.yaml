@@ -9,78 +9,85 @@ Globals:
 
 Resources:
   BlogApi:
-    Type: AWS::Serverless::Api
+    Type: AWS::Serverless::HttpApi
     Properties:
       StageName: Prod
-      Models:
-        User:
-          type: "object"
-          required:
-            - username
-            - password
-          properties:
-            user_id:
-              type: "string"
-            username:
-              type: "string"
-            password:
-              type: "string"
-        Blog:
-          type: "object"
-          required:
-            - title
-            - category
-            - description
-            - subscribers
-          properties:
-            blog_id:
-              type: "string"
-            user_id:
-              type: "string"
-            title:
-              type: "string"
-            category:
-              type: "string"
-            description:
-              type: "string"
-            subscribers:
-              type: "array"
-              items:
-                type: "string"
-        Post:
-          type: "object"
-          required:
-            - blog_id
-            - title
-            - content
-          properties:
-            post_id:
-              type: "string"
-            user_id:
-              type: "string"
-            blog_id:
-              type: "string"
-            title:
-              type: "string"
-            content:
-              type: "string"
+#      Models:
+#        User:
+#          type: "object"
+#          required:
+#            - username
+#            - password
+#          properties:
+#            user_id:
+#              type: "string"
+#            username:
+#              type: "string"
+#            password:
+#              type: "string"
+#        Blog:
+#          type: "object"
+#          required:
+#            - title
+#            - category
+#            - description
+#            - subscribers
+#          properties:
+#            blog_id:
+#              type: "string"
+#            user_id:
+#              type: "string"
+#            title:
+#              type: "string"
+#            category:
+#              type: "string"
+#            description:
+#              type: "string"
+#            subscribers:
+#              type: "array"
+#              items:
+#                type: "string"
+#        Post:
+#          type: "object"
+#          required:
+#            - blog_id
+#            - title
+#            - content
+#          properties:
+#            post_id:
+#              type: "string"
+#            user_id:
+#              type: "string"
+#            blog_id:
+#              type: "string"
+#            title:
+#              type: "string"
+#            content:
+#              type: "string"
 
-      Cors:
+      CorsConfiguration:
         AllowMethods: "'GET,POST,DELETE,PUT,OPTIONS'"
         AllowHeaders: "'content-type'"
-        AllowOrigin: "'*'"
+        AllowCredentials: "true"
+        AllowOrigins: "'*'"
 
       Auth:
         DefaultAuthorizer: Authorizer
         Authorizers:
           Authorizer:
             FunctionArn: !GetAtt Authorizer.Arn
+            FunctionInvokeRole: !GetAtt AuthorizerRole.Arn
+            Identity:
+              Headers:
+                - Authorization
+            AuthorizerPayloadFormatVersion: "2.0"
+            EnableSimpleResponses: true
+
 
   Authorizer:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
-      Handler: authorizer.handler
       Policies:
         - AmazonDynamoDBFullAccess
         - DynamoDBCrudPolicy:
@@ -104,40 +111,43 @@ Resources:
         - x86_64
       Events:
         GetAllUsers:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Type: HttpApi # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /user
             Method: get
-            RestApiId: !Ref BlogApi
+            ApiId: !Ref BlogApi
         GetUserById:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /user/id/{id}
             Method: get
-            RestApiId: !Ref BlogApi
+            ApiId: !Ref BlogApi
         GetUserByUsername:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /user/username/{username}
             Method: get
-            RestApiId: !Ref BlogApi
+            ApiId: !Ref BlogApi
         CreateUser:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /user
             Method: post
+            ApiId: !Ref BlogApi
+            Auth:
+              Authorizer: NONE
         UpdateUser:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /user
             Method: put
-            RestApiId: !Ref BlogApi
+            ApiId: !Ref BlogApi
         DeleteUser:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /user
             Method: delete
-            RestApiId: !Ref BlogApi
+            ApiId: !Ref BlogApi
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./lambdas/user
@@ -155,53 +165,53 @@ Resources:
         - x86_64
       Events:
         GetAllBlogs:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /blog
             Method: get
-            RestApiId: !Ref BlogApi
+            ApiId: !Ref BlogApi
         GetBlogById:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /blog/id/{id}
             Method: get
-            RestApiId: !Ref BlogApi
+            ApiId: !Ref BlogApi
         GetBlogByTitle:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /blog/title/{title}
             Method: get
-            RestApiId: !Ref BlogApi
+            ApiId: !Ref BlogApi
         GetBlogByCategory:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /blog/category/{category}
             Method: get
-            RestApiId: !Ref BlogApi
+            ApiId: !Ref BlogApi
         GetBlogByAuthor:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /blog/author/{author}
             Method: get
-            RestApiId: !Ref BlogApi
+            ApiId: !Ref BlogApi
         CreateBlog:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /blog
             Method: post
-            RestApiId: !Ref BlogApi
+            ApiId: !Ref BlogApi
         UpdateBlog:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /blog
             Method: put
-            RestApiId: !Ref BlogApi
+            ApiId: !Ref BlogApi
         DeleteBlog:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /blog/id/{id}
             Method: delete
-            RestApiId: !Ref BlogApi
+            ApiId: !Ref BlogApi
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./lambdas/blog

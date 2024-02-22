@@ -1,3 +1,5 @@
+import json
+
 import boto3
 from base64 import b64decode
 import re
@@ -9,6 +11,7 @@ blog_user_table = boto3.resource('dynamodb', region_name=region_name).Table('Blo
 
 
 def lambda_handler(event, context):
+
     try:
         auth_header = event['headers'].get("Authorization")
         if not auth_header:
@@ -23,13 +26,13 @@ def lambda_handler(event, context):
 
         user_guid, effect = found_in_db(username, password)
         if effect == "Allow":
-            return generate_policy('user', effect, event['methodArn'], user_guid)
+            return generate_policy(effect, user_guid)
         else:
             raise Exception('Unauthorized')
 
     except Exception as e:
-        print(f"Error: {str(e)}")
-        raise Exception('Unauthorized')
+        print(f"Error: {str(e.with_traceback(None))}")
+        return generate_policy('Deny', None)
 
 
 def found_in_db(username, password):
@@ -42,25 +45,29 @@ def found_in_db(username, password):
     )
 
     if len(response["Items"]) == 1:
-        user_guid = response["Items"][0].get("user_guid")  # Assuming 'user_guid' is the attribute name in your DynamoDB table
+        user_guid = response["Items"][0].get("Id")  # Assuming 'user_guid' is the attribute name in your DynamoDB table
         return user_guid, "Allow"
     else:
         return None, "Deny"
 
 
-def generate_policy(principal_id, effect, resource, user_guid):
+def generate_policy(effect, user_guid):
+    isAuthorized = effect == "Allow"
     auth_response = {
-        "principalId": principal_id,
-        "policyDocument": {
-            "Version": "2012-10-17",
-            "Statement": [{
-                "Action": "execute-api:Invoke",
-                "Effect": effect,
-                "Resource": resource
-            }]
-        },
+        # "principalId": principal_id,
+        # "policyDocument": {
+        #     "Version": "2012-10-17",
+        #     "Statement": [{
+        #         "Action": "execute-api:Invoke",
+        #         "Effect": effect,
+        #         "Resource": resource
+        #     }]
+        # },
+        "isAuthorized": isAuthorized,
         "context": {
             "user_guid": user_guid
-        }
+        } if isAuthorized else {}
     }
+
+    print(f"Auth Response: {json.dumps(auth_response, indent=2)}")
     return auth_response
