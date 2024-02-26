@@ -94,11 +94,11 @@ def update_blog(event, context):
         return response(400, "Blog not found")
 
     if blog['author'] == user_id:
-        if title is not "":
+        if title != "":
             blog['title'] = title
-        if category is not "":
+        if category != "":
             blog['category'] = category
-        if description is not "":
+        if description != "":
             blog['description'] = description
 
         blog_blog_table.put_item(Item=blog)
