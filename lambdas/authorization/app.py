@@ -65,7 +65,7 @@ def generate_policy(effect, user_id):
         # },
         "isAuthorized": isAuthorized,
         "context": {
-            "user_guid": user_id
+            "user_id": user_id
         } if isAuthorized else {}
     }
 

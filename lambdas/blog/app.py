@@ -11,7 +11,7 @@ blog_blog_table = boto3.resource('dynamodb', region_name=region_name).Table('Blo
 #   This lambda will be locked down to only authenticated users, so we don't need to check for that here,
 #   but we still need to check the http method
 def lambda_handler(event, context):
-    http_method = event["httpMethod"]
+    http_method = event["requestContext"]["http"]["method"]
 
     if http_method == "GET":
         return get_blog(event, context)
@@ -30,7 +30,7 @@ def create_blog(event, context):
     if "body" in event and event["body"] is not None:
         body = json.loads(event["body"])
 
-    user_id = event['requestContext']['authorizer']['user_guid']
+    user_id = event['requestContext']['authorizer']['lambda']['user_id']
 
     blog_id = str(uuid4())
     title = body["title"]
@@ -39,7 +39,7 @@ def create_blog(event, context):
 
     blog_blog_table.put_item(Item={
         "Id": blog_id,
-        "user_guid": user_id,
+        "author": user_id,
         "title": title,
         "category": category,
         "description": description,
@@ -74,6 +74,10 @@ def get_blog(event, context):
 
 
 def update_blog(event, context):
+    user_id = event['requestContext']['authorizer']['lambda']['user_id']
+    if user_id is None:
+        return response(401, "Unauthorized")
+
     if "body" in event and event["body"] is not None:
         event = json.loads(event["body"])
 
@@ -89,16 +93,12 @@ def update_blog(event, context):
     if blog is None:
         return response(400, "Blog not found")
 
-    user_id = event['requestContext']['authorizer']['user_guid']
-    if user_id is None:
-        return response(401, "Unauthorized")
-
-    if blog['user_guid'] == user_id:
-        if title is not None:
+    if blog['author'] == user_id:
+        if title is not "":
             blog['title'] = title
-        if category is not None:
+        if category is not "":
             blog['category'] = category
-        if description is not None:
+        if description is not "":
             blog['description'] = description
 
         blog_blog_table.put_item(Item=blog)
@@ -114,16 +114,20 @@ def delete_blog(event, context):
     if "pathParameters" not in event:
         return response(400, {"error": "no path params"})
     path = event["pathParameters"]
-    if path is None or "blog_id" not in path:
-        return response(400, "no blog_id found")
-    user_id = event['requestContext']['authorizer']['user_guid']
-    blog_id = event["id"]
-    blog = blog_blog_table.get_item(Key={"Id": blog_id})["Item"]
+    if path is None or "id" not in path:
+        return response(400, "no id found")
+    user_id = event['requestContext']['authorizer']['lambda']['user_id']
+    blog_id = path["id"]
 
-    if blog is None:
+    try:
+        blog = blog_blog_table.get_item(Key={"Id": blog_id})["Item"]
+    except KeyError:
         return response(400, "Blog not found")
 
-    if blog['user_guid'] != user_id:
+    # if blog is None:
+    #     return response(400, "Blog not found")
+
+    if blog['author'] != user_id:
         return response(401, "Unauthorized")
 
     output = blog_blog_table.delete_item(Key={"Id": blog_id})
