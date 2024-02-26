@@ -5,7 +5,7 @@ from boto3.dynamodb.conditions import Attr
 from os import getenv
 from uuid import uuid4
 import json
-
+#comment for ha
 region_name = getenv('APP_REGION')
 blog_user_table = boto3.resource('dynamodb', region_name=region_name).Table('BlogUser')
 
