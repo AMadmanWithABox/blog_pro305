@@ -5,7 +5,7 @@ from boto3.dynamodb.conditions import Attr
 from os import getenv
 from uuid import uuid4
 import json
-#comment for ha
+
 region_name = getenv('APP_REGION')
 blog_user_table = boto3.resource('dynamodb', region_name=region_name).Table('BlogUser')
 
@@ -59,6 +59,7 @@ def create_user(event, context):
     # Grab the username and password from the request body
     username = event["username"]
     password = event["password"]
+    email = event["email"]
 
     # check if the username or password is empty
     if username is None or password is None:
@@ -68,7 +69,8 @@ def create_user(event, context):
     blog_user_table.put_item(Item={
         "Id": user_id,
         "username": username,
-        "password": password
+        "password": password,
+        "email": email
     })
 
     return response(200, {"user_id": user_id, "message": "User successfully created!"})
