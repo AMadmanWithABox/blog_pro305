@@ -24,9 +24,9 @@ def lambda_handler(event, context):
         credentials = b64decode(matcher1.group(1)).decode('utf-8')
         username, password = credentials.split(':')
 
-        user_guid, effect = found_in_db(username, password)
+        user_id, effect = found_in_db(username, password)
         if effect == "Allow":
-            return generate_policy(effect, user_guid)
+            return generate_policy(effect, user_id)
         else:
             raise Exception('Unauthorized')
 
@@ -45,13 +45,13 @@ def found_in_db(username, password):
     )
 
     if len(response["Items"]) == 1:
-        user_guid = response["Items"][0].get("Id")  # Assuming 'user_guid' is the attribute name in your DynamoDB table
-        return user_guid, "Allow"
+        user_id = response["Items"][0].get("Id")  # Assuming 'user_guid' is the attribute name in your DynamoDB table
+        return user_id, "Allow"
     else:
         return None, "Deny"
 
 
-def generate_policy(effect, user_guid):
+def generate_policy(effect, user_id):
     isAuthorized = effect == "Allow"
     auth_response = {
         # "principalId": principal_id,
@@ -65,7 +65,7 @@ def generate_policy(effect, user_guid):
         # },
         "isAuthorized": isAuthorized,
         "context": {
-            "user_guid": user_guid
+            "user_guid": user_id
         } if isAuthorized else {}
     }
 

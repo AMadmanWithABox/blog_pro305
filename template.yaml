@@ -12,58 +12,58 @@ Resources:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: Prod
-#      Models:
-#        User:
-#          type: "object"
-#          required:
-#            - username
-#            - password
-#          properties:
-#            user_id:
-#              type: "string"
-#            username:
-#              type: "string"
-#            password:
-#              type: "string"
-#        Blog:
-#          type: "object"
-#          required:
-#            - title
-#            - category
-#            - description
-#            - subscribers
-#          properties:
-#            blog_id:
-#              type: "string"
-#            user_id:
-#              type: "string"
-#            title:
-#              type: "string"
-#            category:
-#              type: "string"
-#            description:
-#              type: "string"
-#            subscribers:
-#              type: "array"
-#              items:
-#                type: "string"
-#        Post:
-#          type: "object"
-#          required:
-#            - blog_id
-#            - title
-#            - content
-#          properties:
-#            post_id:
-#              type: "string"
-#            user_id:
-#              type: "string"
-#            blog_id:
-#              type: "string"
-#            title:
-#              type: "string"
-#            content:
-#              type: "string"
+      Models:
+        User:
+          type: "object"
+          required:
+            - username
+            - password
+          properties:
+            user_id:
+              type: "string"
+            username:
+              type: "string"
+            password:
+              type: "string"
+        Blog:
+          type: "object"
+          required:
+            - title
+            - category
+            - description
+            - subscribers
+          properties:
+            blog_id:
+              type: "string"
+            user_id:
+              type: "string"
+            title:
+              type: "string"
+            category:
+              type: "string"
+            description:
+              type: "string"
+            subscribers:
+              type: "array"
+              items:
+                type: "string"
+        Post:
+          type: "object"
+          required:
+            - blog_id
+            - title
+            - content
+          properties:
+            post_id:
+              type: "string"
+            user_id:
+              type: "string"
+            blog_id:
+              type: "string"
+            title:
+              type: "string"
+            content:
+              type: "string"
 
       CorsConfiguration:
         AllowMethods: "'GET,POST,DELETE,PUT,OPTIONS'"

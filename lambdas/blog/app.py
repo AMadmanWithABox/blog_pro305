@@ -30,7 +30,7 @@ def create_blog(event, context):
     if "body" in event and event["body"] is not None:
         body = json.loads(event["body"])
 
-    user_guid = event['requestContext']['authorizer']['user_guid']
+    user_id = event['requestContext']['authorizer']['user_guid']
 
     blog_id = str(uuid4())
     title = body["title"]
@@ -39,7 +39,7 @@ def create_blog(event, context):
 
     blog_blog_table.put_item(Item={
         "Id": blog_id,
-        "user_guid": user_guid,
+        "user_guid": user_id,
         "title": title,
         "category": category,
         "description": description,
@@ -65,7 +65,7 @@ def get_blog(event, context):
         return response(200, blog)
     if "author" in path:
         author = path["author"]
-        blog = blog_blog_table.scan(FilterExpression=Attr('user_guid').eq(author))
+        blog = blog_blog_table.scan(FilterExpression=Attr('user_id').eq(author))
         return response(200, blog)
 
     blogs = blog_blog_table.scan()["Items"]
@@ -89,11 +89,11 @@ def update_blog(event, context):
     if blog is None:
         return response(400, "Blog not found")
 
-    user_guid = event['requestContext']['authorizer']['user_guid']
-    if user_guid is None:
+    user_id = event['requestContext']['authorizer']['user_guid']
+    if user_id is None:
         return response(401, "Unauthorized")
 
-    if blog['user_guid'] == user_guid:
+    if blog['user_guid'] == user_id:
         if title is not None:
             blog['title'] = title
         if category is not None:
@@ -105,7 +105,7 @@ def update_blog(event, context):
 
         return response(200, blog)
 
-    blog['subscribers'].append(user_guid)
+    blog['subscribers'].append(user_id)
     blog_blog_table.put_item(Item=blog)
     return response(200, blog)
 
@@ -116,14 +116,14 @@ def delete_blog(event, context):
     path = event["pathParameters"]
     if path is None or "blog_id" not in path:
         return response(400, "no blog_id found")
-    user_guid = event['requestContext']['authorizer']['user_guid']
+    user_id = event['requestContext']['authorizer']['user_guid']
     blog_id = event["id"]
     blog = blog_blog_table.get_item(Key={"Id": blog_id})["Item"]
 
     if blog is None:
         return response(400, "Blog not found")
 
-    if blog['user_guid'] != user_guid:
+    if blog['user_guid'] != user_id:
         return response(401, "Unauthorized")
 
     output = blog_blog_table.delete_item(Key={"Id": blog_id})

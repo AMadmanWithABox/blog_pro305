@@ -27,17 +27,17 @@ def lambda_handler(event, context):
     # Get the user's guid from the decoded credentials
     # current_user_guid = get_user_by_username_password(decoded_credentials.split(":")[0], decoded_credentials.split(":")[1])
     print("Received event: " + json.dumps(event, indent=2))
-    current_user_guid = event['requestContext']['authorizer']['lambda']['user_guid']
+    current_user_id = event['requestContext']['authorizer']['lambda']['user_guid']
     # We only need to check the remaining http methods if the user is authenticated, we can do that here once.
-    if current_user_guid is None:
+    if current_user_id is None:
         return response(401, "Unauthorized")
 
     if http_method == "GET":
         return get_user(event, context)
     if http_method == "PUT":
-        return update_user(event, context, current_user_guid)
+        return update_user(event, context, current_user_id)
     if http_method == "DELETE":
-        return delete_user(current_user_guid)
+        return delete_user(current_user_id)
     # else:
     return response(400, "invalid http method")
     # else:   # This should never happen, but it's good to have a catch-all
