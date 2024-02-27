@@ -7,81 +7,44 @@ Globals:
     Timeout: 3
 
 Resources:
+  BlogUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: BlogUserPool
+      Schema:
+        - Name: username
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 4
+          RequireUppercase: false
+          RequireLowercase: false
+          RequireNumbers: false
+          RequireSymbols: false
+
+  BlogUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: BlogClient
+      GenerateSecret: false  # Set to true if the client is a server-side application
+      UserPoolId: !Ref BlogUserPool
+
   BlogApi:
-    Type: AWS::Serverless::HttpApi
+    Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
-#      Models:
-#        User:
-#          type: "object"
-#          required:
-#            - username
-#            - password
-#          properties:
-#            user_id:
-#              type: "string"
-#            username:
-#              type: "string"
-#            password:
-#              type: "string"
-#        Blog:
-#          type: "object"
-#          required:
-#            - title
-#            - category
-#            - description
-#            - subscribers
-#          properties:
-#            blog_id:
-#              type: "string"
-#            user_id:
-#              type: "string"
-#            title:
-#              type: "string"
-#            category:
-#              type: "string"
-#            description:
-#              type: "string"
-#            subscribers:
-#              type: "array"
-#              items:
-#                type: "string"
-#        Post:
-#          type: "object"
-#          required:
-#            - blog_id
-#            - title
-#            - content
-#          properties:
-#            post_id:
-#              type: "string"
-#            user_id:
-#              type: "string"
-#            blog_id:
-#              type: "string"
-#            title:
-#              type: "string"
-#            content:
-#              type: "string"
-
-      CorsConfiguration:
+      Cors:
         AllowMethods: "'GET,POST,DELETE,PUT,OPTIONS'"
         AllowHeaders: "'*'"
         AllowCredentials: "true"
         AllowOrigins: "'*'"
-
       Auth:
-        DefaultAuthorizer: Authorizer
+        DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
-          Authorizer:
-            FunctionArn: !GetAtt Authorizer.Arn
-            FunctionInvokeRole: !GetAtt AuthorizerRole.Arn
-            Identity:
-              Headers:
-                - Authorization
-            AuthorizerPayloadFormatVersion: "2.0"
-            EnableSimpleResponses: true
-
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt BlogUserPool.Arn
 
   Authorizer:
     Type: AWS::Serverless::Function
@@ -99,54 +62,66 @@ Resources:
       DockerTag: python3.12-v1
 
   User:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
       Policies:
-        - AmazonDynamoDBFullAccess
-        - DynamoDBCrudPolicy:
-            TableName: BlogUser
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: "Allow"
+              Action:
+                - "cognito-idp:ListUsers"
+                - "cognito-idp:AdminCreateUser"
+                - "cognito-idp:AdminGetUser"
+                - "cognito-idp:AdminUpdateUserAttributes"
+                - "cognito-idp:AdminDeleteUser"
+                # Add any other Cognito actions your function needs
+              Resource:
+                - !GetAtt BlogUserPool.Arn
       Architectures:
-        - x86_64
+      - x86_64
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref BlogUserPool
       Events:
         GetAllUsers:
-          Type: HttpApi # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Type: Api
           Properties:
             Path: /user
             Method: get
-            ApiId: !Ref BlogApi
+            RestApiId: !Ref BlogApi
         GetUserById:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /user/id/{id}
             Method: get
-            ApiId: !Ref BlogApi
+            RestApiId: !Ref BlogApi
         GetUserByUsername:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /user/username/{username}
             Method: get
-            ApiId: !Ref BlogApi
+            RestApiId: !Ref BlogApi
         CreateUser:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /user
             Method: POST
-            ApiId: !Ref BlogApi
+            RestApiId: !Ref BlogApi
             Auth:
               Authorizer: NONE
         UpdateUser:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /user
             Method: put
-            ApiId: !Ref BlogApi
+            RestApiId: !Ref BlogApi
         DeleteUser:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /user
             Method: delete
-            ApiId: !Ref BlogApi
+            RestApiId: !Ref BlogApi
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./lambdas/user
@@ -164,66 +139,57 @@ Resources:
         - x86_64
       Events:
         GetAllBlogs:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /blog
             Method: get
-            ApiId: !Ref BlogApi
+            RestApiId: !Ref BlogApi
         GetBlogById:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /blog/id/{id}
             Method: get
-            ApiId: !Ref BlogApi
+            RestApiId: !Ref BlogApi
         GetBlogByTitle:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /blog/title/{title}
             Method: get
-            ApiId: !Ref BlogApi
+            RestApiId: !Ref BlogApi
         GetBlogByCategory:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /blog/category/{category}
             Method: get
-            ApiId: !Ref BlogApi
+            RestApiId: !Ref BlogApi
         GetBlogByAuthor:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /blog/author/{author}
             Method: get
-            ApiId: !Ref BlogApi
+            RestApiId: !Ref BlogApi
         CreateBlog:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /blog
             Method: post
-            ApiId: !Ref BlogApi
+            RestApiId: !Ref BlogApi
         UpdateBlog:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /blog
             Method: put
-            ApiId: !Ref BlogApi
+            RestApiId: !Ref BlogApi
         DeleteBlog:
-          Type: HttpApi
+          Type: Api
           Properties:
             Path: /blog/id/{id}
             Method: delete
-            ApiId: !Ref BlogApi
+            RestApiId: !Ref BlogApi
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./lambdas/blog
       DockerTag: python3.12-v1
-
-
-  UserTable:
-    Type: AWS::Serverless::SimpleTable
-    Properties:
-      PrimaryKey:
-          Name: Id
-          Type: String
-      TableName: BlogUser
 
   BlogTable:
     Type: AWS::Serverless::SimpleTable
