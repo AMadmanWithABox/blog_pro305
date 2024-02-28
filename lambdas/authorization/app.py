@@ -1,8 +1,7 @@
 import json
-
+import base64
 import boto3
 from base64 import b64decode
-import re
 import os
 
 # Initialize DynamoDB resource
@@ -11,28 +10,29 @@ blog_user_table = boto3.resource('dynamodb', region_name=region_name).Table('Blo
 
 
 def lambda_handler(event, context):
+    # Retrieve the token from the event
+    token = event['authorizationToken']
 
-    try:
-        auth_header = event['headers'].get("Authorization")
-        if not auth_header:
-            raise ValueError("Authorization header is missing")
+    # Ensure the token starts with "Basic "
+    if not token.startswith("Basic "):
+        return generate_deny_policy()
 
-        matcher1 = re.match("^Basic (.+)$", auth_header)
-        if not matcher1:
-            raise ValueError("Invalid Authorization header format")
+    # Remove "Basic " prefix and decode the remaining Base64 token
+    encoded_credentials = token[6:]
+    decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
 
-        credentials = b64decode(matcher1.group(1)).decode('utf-8')
-        username, password = credentials.split(':')
+    # Split the decoded credentials into username and password
+    username, password = decoded_credentials.split(':', 1)
 
-        user_id, effect = found_in_db(username, password)
-        if effect == "Allow":
-            return generate_policy(effect, user_id)
-        else:
-            raise Exception('Unauthorized')
+    user_id, effect = found_in_db(username, password)
+    if effect == "Allow":
+        return generate_allow_policy(user_id)
+    else:
+        return generate_deny_policy()
 
-    except Exception as e:
-        print(f"Error: {str(e.with_traceback(None))}")
-        return generate_policy('Deny', None)
+    # except Exception as e:
+    #     print(f"Error: {str(e)}")
+    #     return generate_deny_policy()
 
 
 def found_in_db(username, password):
@@ -45,29 +45,43 @@ def found_in_db(username, password):
     )
 
     if len(response["Items"]) == 1:
-        user_id = response["Items"][0].get("Id")  # Assuming 'user_guid' is the attribute name in your DynamoDB table
+        user_id = response["Items"][0].get("Id")
         return user_id, "Allow"
     else:
         return None, "Deny"
 
 
-def generate_policy(effect, user_id):
-    isAuthorized = effect == "Allow"
-    auth_response = {
-        # "principalId": principal_id,
-        # "policyDocument": {
-        #     "Version": "2012-10-17",
-        #     "Statement": [{
-        #         "Action": "execute-api:Invoke",
-        #         "Effect": effect,
-        #         "Resource": resource
-        #     }]
-        # },
-        "isAuthorized": isAuthorized,
-        "context": {
-            "user_id": user_id
-        } if isAuthorized else {}
+def generate_allow_policy(user_id):
+    return {
+        "principalId": user_id,
+        "policyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Action": "execute-api:Invoke",
+                    "Effect": "Allow",
+                    "Resource": "*"
+                }
+            ]
+        }
+        # ,
+        # "context": {
+        #     "user_id": user_id
+        # }
     }
 
-    print(f"Auth Response: {json.dumps(auth_response, indent=2)}")
-    return auth_response
+
+def generate_deny_policy():
+    return {
+        "principalId": "UnauthorizedUser",
+        "policyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Action": "execute-api:Invoke",
+                    "Effect": "Deny",
+                    "Resource": "*"
+                }
+            ]
+        }
+    }

@@ -1,4 +1,5 @@
 import boto3
+import base64
 from boto3.dynamodb.conditions import Key, Attr
 from os import getenv
 from uuid import uuid4
@@ -6,31 +7,42 @@ import json
 
 region_name = getenv('APP_REGION')
 blog_blog_table = boto3.resource('dynamodb', region_name=region_name).Table('BlogBlog')
+blog_user_table = boto3.resource('dynamodb', region_name=region_name).Table('BlogUser')
 
 
 #   This lambda will be locked down to only authenticated users, so we don't need to check for that here,
 #   but we still need to check the http method
 def lambda_handler(event, context):
-    http_method = event["requestContext"]["http"]["method"]
+    http_method = event["httpMethod"]
+
+    # grab the auth header and decode it
+    auth_header = event["headers"]["Authorization"]
+    if not auth_header:
+        return response(401, "Unauthorized")
+    encoded_credentials = auth_header.split(' ')[1]
+    decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
+
+    current_user_id = get_user_by_username_password(decoded_credentials.split(":")[0],
+                                                    decoded_credentials.split(":")[1])
 
     if http_method == "GET":
         return get_blog(event, context)
     if http_method == "POST":
-        return create_blog(event, context)
+        return create_blog(event, context, current_user_id)
     if http_method == "PUT":
-        return update_blog(event, context)
+        return update_blog(event, context, current_user_id)
     if http_method == "DELETE":
-        return delete_blog(event, context)
+        return delete_blog(event, context, current_user_id)
     else:
         return response(400, "invalid http method")
 
 
-def create_blog(event, context):
+def create_blog(event, context, user_id):
     body = None
     if "body" in event and event["body"] is not None:
         body = json.loads(event["body"])
 
-    user_id = event['requestContext']['authorizer']['lambda']['user_id']
+    # user_id = event['requestContext']['authorizer']['lambda']['user_id']
 
     blog_id = str(uuid4())
     title = body["title"]
@@ -50,7 +62,14 @@ def create_blog(event, context):
 
 
 def get_blog(event, context):
+    print("event:", event)
     path = event["pathParameters"]
+    print("path:", path)
+    if path is None:
+        blogs = blog_blog_table.scan()["Items"]
+        blogs = sorted(blogs, key=lambda x: len(x['subscribers']))
+        return response(200, blogs)
+
     if "id" in path:
         blog_id = path["id"]
         blog = blog_blog_table.get_item(Key={"Id": blog_id})["Item"]
@@ -68,13 +87,9 @@ def get_blog(event, context):
         blog = blog_blog_table.scan(FilterExpression=Attr('user_id').eq(author))
         return response(200, blog)
 
-    blogs = blog_blog_table.scan()["Items"]
-    blogs = sorted(blogs, key=lambda x: len(x['subscribers']))
-    return response(200, blogs)
 
-
-def update_blog(event, context):
-    user_id = event['requestContext']['authorizer']['lambda']['user_id']
+def update_blog(event, context, user_id):
+    # user_id = event['requestContext']['authorizer']['lambda']['user_id']
     if user_id is None:
         return response(401, "Unauthorized")
 
@@ -110,13 +125,13 @@ def update_blog(event, context):
     return response(200, blog)
 
 
-def delete_blog(event, context):
+def delete_blog(event, context, user_id):
     if "pathParameters" not in event:
         return response(400, {"error": "no path params"})
     path = event["pathParameters"]
     if path is None or "id" not in path:
         return response(400, "no id found")
-    user_id = event['requestContext']['authorizer']['lambda']['user_id']
+    # user_id = event['requestContext']['authorizer']['lambda']['user_id']
     blog_id = path["id"]
 
     try:
@@ -135,39 +150,15 @@ def delete_blog(event, context):
     return response(200, output)
 
 
-# def subscribe_to_blog(event, context):
-#     if "body" in event and event["body"] is not None:
-#         event = json.loads(event["body"])
-#
-#     #  Get the blog id from the path parameters, and the user_guid from the authorizer
-#     blog_id = event["blog_id"]
-#     user_guid = event['requestContext']['authorizer']['user_guid']
-#
-#     # Get the blog from the table
-#     blog = blog_blog_table.get_item(Key={"Id": blog_id})["Item"]
-#     if blog is None:
-#         return response(400, "Blog not found")
-#
-#     # check if user is the owner of the blog
-#     if blog['user_guid'] == user_guid:
-#         return response(400, "User cannot subscribe to their own blog")
-#
-#     # Get the subscribers from the blog
-#     subscribers = blog['subscribers']
-#     #  Check if the user is already subscribed
-#     if user_guid not in subscribers:
-#         subscribers.append(user_guid)
-#     else:
-#         return response(400, "User already subscribed")
-#
-#     # Update the blog with the new subscribers list
-#     blog_blog_table.update_item(
-#         Key={"Id": blog_id},
-#         UpdateExpression="set subscribers = :s",
-#         ExpressionAttributeValues={":s": subscribers}
-#     )
-#
-#     return response(200, blog)
+def get_user_by_username_password(username, password):
+    # find the user in the table
+    user = blog_user_table.scan(FilterExpression=Attr('username').eq(username) & Attr('password').eq(password))
+    # if the user is found, return their guid
+    if len(user["Items"]) == 1:
+        return user["Items"][0]["Id"]
+    # if the user is not found, return None
+    else:
+        return None
 
 
 def response(code, body):
