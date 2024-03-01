@@ -174,6 +174,9 @@ Resources:
   Post:
     Type: AWS::Serverless::Function
     Properties:
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref Queue
       PackageType: Image
       Policies:
         - AmazonDynamoDBFullAccess
@@ -184,6 +187,11 @@ Resources:
             TableName: BlogPost
         - DynamoDBCrudPolicy:
             TableName: BlogUser
+        - Statement:
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt Queue.Arn
       Architectures:
         - x86_64
       Events:
@@ -245,3 +253,37 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: BlogQueue
+
+  SQSProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref S3Bucket
+      PackageType: Image
+      Policies:
+        - AWSLambdaSQSQueueExecutionRole
+        - AmazonS3FullAccess
+      Architectures:
+        - x86_64
+      Events:
+        QueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt Queue.Arn
+            BatchSize: 10
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./lambdas/sqs_processor
+      DockerTag: python3.12-v1
+
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::AccountId}-${AWS::Region}-blog-s3-bucket'
+
+
+
+
+

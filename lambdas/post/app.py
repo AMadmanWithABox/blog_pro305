@@ -5,6 +5,11 @@ from boto3.dynamodb.conditions import Attr
 from os import getenv
 from uuid import uuid4
 import json
+from datetime import datetime
+
+client = boto3.client('sqs')
+queue_url = getenv('QUEUE_URL')
+
 
 region_name = getenv('APP_REGION')
 blog_post_table = boto3.resource('dynamodb', region_name=region_name).Table('BlogPost')
@@ -64,6 +69,13 @@ def create_post(event, context, user_id):
         "title": title,
         "content": content
     })
+
+    print("QueueURL: ", queue_url)
+    date_time = datetime.now()
+    message = client.send_message(
+        QueueUrl=queue_url,
+        MessageBody=("This was sent onnnn: " + str(date_time.strftime('%Y-%m-%d %H:%M:%S') + 'by alex'))
+        )
 
     return response(200, {"post_id": post_id, "message": "Post successfully created!"})
 
