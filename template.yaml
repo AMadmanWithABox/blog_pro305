@@ -15,21 +15,15 @@ Resources:
       Cors:
         AllowMethods: "'GET,POST,DELETE,PUT,OPTIONS'"
         AllowHeaders: "'*'"
-#        AllowCredentials: true
         AllowOrigin: "'*'"
       Auth:
-#        EnableIamAuthorizer: true
         DefaultAuthorizer: Authorizer
         Authorizers:
           Authorizer:
-#            FunctionPayloadType: REQUEST
             FunctionArn: !GetAtt Authorizer.Arn
             Identity:
               Headers:
                 - Authorization
-#            AuthorizerPayloadFormatVersion: "2.0"
-#            EnableSimpleResponses: true
-#            AuthorizerPayloadFormatVersion: "2.0"
 
   Authorizer:
     Type: AWS::Serverless::Function
@@ -111,6 +105,10 @@ Resources:
         - CloudWatchLogsFullAccess
         - DynamoDBCrudPolicy:
             TableName: BlogBlog
+        - DynamoDBCrudPolicy:
+            TableName: BlogPost
+        - DynamoDBCrudPolicy:
+            TableName: BlogUser
       Architectures:
         - x86_64
       Events:
@@ -165,7 +163,7 @@ Resources:
         GetBlogPosts:
           Type: Api
           Properties:
-            Path: /blog/id/{id}/posts
+            Path: /blog/posts/{blog_id}
             Method: get
             RestApiId: !Ref BlogApi
     Metadata:
@@ -181,7 +179,11 @@ Resources:
         - AmazonDynamoDBFullAccess
         - CloudWatchLogsFullAccess
         - DynamoDBCrudPolicy:
+            TableName: BlogBlog
+        - DynamoDBCrudPolicy:
             TableName: BlogPost
+        - DynamoDBCrudPolicy:
+            TableName: BlogUser
       Architectures:
         - x86_64
       Events:
@@ -238,3 +240,8 @@ Resources:
           Name: Id
           Type: String
       TableName: BlogPost
+
+  Queue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: BlogQueue

@@ -88,17 +88,17 @@ def update_post(event, context, user_id):
     if "body" in event and event["body"] is not None:
         body = json.loads(event["body"])
 
-    post_id = event["pathParameters"]["post_id"]
+    post_id = body["post_id"]
     if post_id is None:
-        return response(404, "Post not found")
+        return response(404, "Post_id not found")
 
     # check if the post_id exists
     post = blog_post_table.get_item(Key={"Id": post_id})["Item"]
-    if "Item" not in post:
+    if post is None:
         return response(400, "Post not found")
 
     # grab the blog_id from the post
-    blog_id = post["Item"]["blog_id"]
+    blog_id = post["blog_id"]
 
     # check if the user is the author of the blog
     blog = blog_blog_table.get_item(Key={"Id": blog_id})
@@ -124,18 +124,18 @@ def delete_post(event, context, user_id):
 
     path = event["pathParameters"]
 
-    if path is None or "post_id" not in path:
+    if path is None or "id" not in path:
         return response(400, "no post_id found")
 
-    post_id = path["post_id"]
+    post_id = path["id"]
 
     # check if the post_id exists
     post = blog_post_table.get_item(Key={"Id": post_id})["Item"]
-    if "Item" not in post:
+    if post is None:
         return response(400, "Post not found")
 
     # grab the blog_id from the post
-    blog_id = post["Item"]["blog_id"]
+    blog_id = post["blog_id"]
 
     # check if the user is the author of the blog
     blog = blog_blog_table.get_item(Key={"Id": blog_id})

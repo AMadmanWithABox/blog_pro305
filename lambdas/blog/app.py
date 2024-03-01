@@ -8,6 +8,7 @@ import json
 region_name = getenv('APP_REGION')
 blog_blog_table = boto3.resource('dynamodb', region_name=region_name).Table('BlogBlog')
 blog_user_table = boto3.resource('dynamodb', region_name=region_name).Table('BlogUser')
+blog_post_table = boto3.resource('dynamodb', region_name=region_name).Table('BlogPost')
 
 
 #   This lambda will be locked down to only authenticated users, so we don't need to check for that here,
@@ -72,7 +73,7 @@ def get_blog(event, context):
 
     if "id" in path:
         blog_id = path["id"]
-        blog = blog_blog_table.get_item(Key={"Id": blog_id})["Item"]
+        blog = blog_blog_table.scan(FilterExpression=Attr("Id").eq(blog_id))
         return response(200, blog)
     if "title" in path:
         title = path["title"]
@@ -86,6 +87,11 @@ def get_blog(event, context):
         author = path["author"]
         blog = blog_blog_table.scan(FilterExpression=Attr('user_id').eq(author))
         return response(200, blog)
+    if "blog_id" in path:
+        blog_id = path["blog_id"]
+        # find all the posts for the blog
+        posts = blog_post_table.scan(FilterExpression=Attr('blog_id').eq(blog_id))["Items"]
+        return response(200, posts)
 
 
 def update_blog(event, context, user_id):
